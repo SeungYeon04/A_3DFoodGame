@@ -56,11 +56,38 @@ export default class App {
   }
 
   _setupCamera() {
-    const width = this._divContainer.clientWidth;
-    const height = this._divContainer.clientHeight;
-    this._camera = new THREE.PerspectiveCamera(60, width / height, 0.1, 100);
-    this._camera.position.set(0, 20, 20);
-  }
+  const width = this._divContainer.clientWidth;
+  const height = this._divContainer.clientHeight;
+
+  // 1. 카메라 생성
+  this._camera = new THREE.PerspectiveCamera(60, width / height, 0.1, 100);
+
+  // 2. 정면에서 위로 수직 이동 (회전은 X)
+  this._camera.position.set(0, 5, 20);
+
+  // 3. 회전 수동 설정 (절대 lookAt 쓰지 마라!)
+  this._camera.rotation.set(0, 0, 0); // pitch, yaw, roll 전부 0도
+
+  // 4. (선택) 쿼터니언 강제로 덮어씌우기 – 안전
+  this._camera.quaternion.set(0, 0, 0, 1); // 기본 회전 없음
+}
+
+
+  /* 위에보는 코드 
+  const aspect = width / height;
+const d = 10; // zoom 정도
+this._camera = new THREE.OrthographicCamera(
+  -d * aspect,
+  d * aspect,
+  d,
+  -d,
+  0.1,
+  100
+);
+this._camera.position.set(0, 10, 20);
+this._camera.lookAt(0, 0, 0);
+
+  */
 
   _setupLight() {
     this._scene.add(new THREE.AmbientLight(0xffffff, 1.0));
@@ -91,8 +118,15 @@ export default class App {
   }
 
   _setupControls() {
-    this._orbitControls = new OrbitControls(this._camera, this._divContainer);
+  this._orbitControls = new OrbitControls(this._camera, this._divContainer);
+
+    // 카메라 앞쪽 방향으로 target 고정
+    const forward = new THREE.Vector3(0, 0, -1);
+    const target = this._camera.position.clone().add(forward);
+    this._orbitControls.target.copy(target);
+    this._orbitControls.update();
   }
+
 
   _setupEvents() {
     window.onresize = this.resize.bind(this);
