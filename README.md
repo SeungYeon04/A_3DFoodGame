@@ -19,7 +19,7 @@ Github url:
 | 🧑‍💻 언어       | HTML CSS JS Three.js |
 | 🖋 IDE          | Visual Studio Code |
 | 📁 버전 관리    | GitHub Desktop |
-| 🧩 3D 모델링   | https://hyper3d.ai/ |
+| 🧩 3D 모델링   | [hyper3d ai](https://hyper3d.ai/) |
 | 🌐 호스팅 | 미정 | 
   
 ## 🎮 주요 기능
