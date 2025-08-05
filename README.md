@@ -5,7 +5,7 @@ Us:Code 의성 청년 아카데미 1주차 프로젝트로써
 수박게임을 참고한 머지게임 웹 프로젝트입니다.  
   
 ## 🔗 페이지 URL 
-Github url: https://a-study.vercel.app/   
+Github url:  
   
 ## 🖥️ 프로젝트 소개
 
