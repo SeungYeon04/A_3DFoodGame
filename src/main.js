@@ -1,6 +1,4 @@
-// ==========================
-// 📦 의조성 및 모듈 보기
-// ==========================
+// 📦 수정된 전체 App 클래스 (카메라는 고정, 병은 실제로 회전 X)
 import "./style.css";
 import * as THREE from "three";
 import { OrbitControls } from "three/addons/controls/OrbitControls.js";
@@ -35,14 +33,13 @@ export default class App {
     RAPIER.init().then(() => {
       this._world = new RAPIER.World(new RAPIER.Vector3(0, -9.81, 0));
       this._setupThreeJs();
-      this._scene.add(this._worldGroup);
 
       this._setupCamera();
       this._setupLight();
       this._setupControls();
       this._setupModel();
 
-      this._cameraController = new CameraCt(this._worldGroup, this._bottleBody);
+      this._cameraController = new CameraCt(this._camera); // ✅ 카메라만 전달
 
       this._setupEvents();
 
@@ -62,7 +59,6 @@ export default class App {
     this._divContainer.appendChild(renderer.domElement);
     this._renderer = renderer;
     this._scene = new THREE.Scene();
-    this._worldGroup = new THREE.Group();
   }
 
   _setupCamera() {
@@ -71,8 +67,6 @@ export default class App {
 
     this._camera = new THREE.PerspectiveCamera(60, width / height, 0.1, 100);
     this._camera.position.set(0, 5, 20);
-    this._camera.rotation.set(0, 0, 0);
-    this._camera.quaternion.set(0, 0, 0, 1);
   }
 
   _setupLight() {
@@ -92,16 +86,14 @@ export default class App {
 
   _setupModel() {
     this._dynamicBodies = [];
-    this._bottleBody = GlassBottle(this._worldGroup, this._world, RAPIER);
-    new FloorBace(this._worldGroup, this._world);
-    this._fruitFactory = new FruitFactory(this._worldGroup, this._world, this._dynamicBodies);
+    this._bottleBody = GlassBottle(this._scene, this._world, RAPIER); // ✅ worldGroup 제거
+    new FloorBace(this._scene, this._world);
+    this._fruitFactory = new FruitFactory(this._scene, this._world, this._dynamicBodies);
   }
 
   _setupControls() {
     this._orbitControls = new OrbitControls(this._camera, this._divContainer);
-    const forward = new THREE.Vector3(0, 0, 0);
-    const target = this._camera.position.clone().add(forward);
-    this._orbitControls.target.copy(target);
+    this._orbitControls.target.set(0, 5, 0);
     this._orbitControls.update();
   }
 
@@ -113,24 +105,17 @@ export default class App {
     requestAnimationFrame(this.render.bind(this));
 
     this._divContainer.addEventListener("click", () => {
-      //쌀, 고추, 진마늘, 흑마늘, 자두, 사과, 복숭아
       const types = ["rice", "chili", "garlic", "plum", "apple", "peach"];
       const type = types[Math.floor(Math.random() * types.length)];
       this._fruitFactory.spawnItem(type, new THREE.Vector3(0, 10, 0));
     });
 
     document.querySelector("#btn-left").addEventListener("click", () => {
-      const angle = THREE.MathUtils.degToRad(90);
-      this._worldGroup.rotation.y += angle;
-      const q = new THREE.Quaternion().setFromEuler(new THREE.Euler(0, this._worldGroup.rotation.y, 0));
-      this._bottleBody.setNextKinematicRotation(q);
+      this._cameraController.rotateLeft();
     });
 
     document.querySelector("#btn-right").addEventListener("click", () => {
-      const angle = THREE.MathUtils.degToRad(-90);
-      this._worldGroup.rotation.y += angle;
-      const q = new THREE.Quaternion().setFromEuler(new THREE.Euler(0, this._worldGroup.rotation.y, 0));
-      this._bottleBody.setNextKinematicRotation(q);
+      this._cameraController.rotateRight();
     });
   }
 

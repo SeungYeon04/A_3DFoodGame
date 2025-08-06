@@ -8,32 +8,32 @@ const ITEM_CONFIGS = {
   peach: {
     glb: "/models/peach.glb",
     scale: 1.5,
-   collider: { type: "sphere", radius: 0.9 },
+    collider: { type: "circle", radius: 1.5, offsetY: 1.5  },
   },
   apple: {
     glb: "/models/apple.glb",
     scale: 1.3,    
-    collider: { type: "sphere", radius: 0.9 }, 
+    collider: { type: "circle", radius: 1.3, offsetY: 1.2  }, 
   },
   plum: {
     glb: "/models/plum.glb",
     scale: 0.9,
-    collider: { type: "sphere", radius: 0.9, halfHeight: 0.5 },  
+    collider: { type: "circle", radius: 0.9, offsetY: 0.8  },  
   },
   garlic: {
     glb: "/models/garlic.glb",
     scale: 0.7,
-    collider: { type: "sphere", radius: 0.7, halfHeight: 0.5 }, 
+    collider: { type: "circle", radius: 0.7, offsetY: 0.3  }, 
   },
   chili: {
     glb: "/models/chili.glb",
     scale: 0.6,
-    collider: { type: "cylinder", radius: 0.15, halfHeight: 0.3  },
+    collider: { type: "line", radius: 0.15, halfHeight: 0.3  },
   },
   rice: {
     glb: "/models/rice.glb",
     scale: 0.4,
-    collider: { type: "cylinder", radius: 0.15, halfHeight: 0.3 }, // 쌀 
+    collider: { type: "line", radius: 0.15, halfHeight: 0.3 }, // 쌀 
   },
   
 };
@@ -61,8 +61,13 @@ export default class FruitFactory {
       mesh.castShadow = true;
       this.scene.add(mesh);
 
+      
       const bodyDesc = RAPIER.RigidBodyDesc.dynamic()
-        .setTranslation(position.x, position.y, position.z)
+        .setTranslation(
+          position.x,
+          position.y, 
+          position.z
+        )
         .setCanSleep(false)
         .setLinearDamping(2.0)
         .setAngularDamping(2.0);
@@ -72,10 +77,10 @@ export default class FruitFactory {
       let colliderDesc;
 
       switch (config.collider.type) {
-        case "sphere":
+        case "circle":
           colliderDesc = RAPIER.ColliderDesc.ball(config.collider.radius);
           break;
-        case "cylinder":
+        case "line":
         default:
           colliderDesc = RAPIER.ColliderDesc.cylinder(
             config.collider.halfHeight,
@@ -83,6 +88,10 @@ export default class FruitFactory {
           );
           break;
       }
+
+      if (config.collider.offsetY) {
+  colliderDesc.setTranslation(0, config.collider.offsetY, 0); // 👈 이 줄
+}
 
       colliderDesc
         .setMass(2)
