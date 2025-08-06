@@ -41,13 +41,56 @@ export default class FruitFactory {
     mesh.castShadow = true;
     mesh.position.copy(position);
     this.scene.add(mesh);
-
+    
     const body = this.world.createRigidBody(
-      RAPIER.RigidBodyDesc.dynamic().setTranslation(position.x, position.y, position.z).setCanSleep(false)
-    );
-    colliderDesc.setMass(1).setRestitution(1.1);
+    RAPIER.RigidBodyDesc.dynamic()
+      .setTranslation(position.x, position.y, position.z)
+      .setCanSleep(false)
+      .setLinearDamping(1.5)      // 더 강하게 감쇠
+      .setAngularDamping(2.0)     // 회전 감쇠 강화
+  );
+
+
+   colliderDesc
+    .setMass(2)  // 무게 증가 → 충격에 더 안정적
+    .setRestitution(0) // 반발력 제거
+    .setFriction(1)
+    .setRestitutionCombineRule(RAPIER.CoefficientCombineRule.Min)
+    .setFrictionCombineRule(RAPIER.CoefficientCombineRule.Min)
+
     this.world.createCollider(colliderDesc, body);
 
     this.dynamicBodies.push([mesh, body]);
   }
+
+  
+  findSafeSpawnY(type = "box", spacing = 0.1) {
+  // 예상 높이 (대충 오브젝트 높이 + 여유)
+  const objectHeight = 2;
+
+  let testY = 2;
+  let safe = false;
+
+  while (!safe && testY < 100) {
+    safe = true;
+
+    for (const [, body] of this.dynamicBodies) {
+      const pos = body.translation();
+      if (Math.abs(pos.x - 0) < 1 && Math.abs(pos.z - 0) < 1) {
+        const bottom = pos.y - 1;
+        const top = pos.y + 1;
+
+        if (testY + objectHeight / 2 >= bottom - spacing &&
+            testY - objectHeight / 2 <= top + spacing) {
+          safe = false;
+          testY += objectHeight + spacing;
+          break;
+        }
+      }
+    }
+  }
+
+  return testY;
+}
+
 }

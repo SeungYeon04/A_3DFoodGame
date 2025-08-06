@@ -72,23 +72,6 @@ export default class App {
   this._camera.quaternion.set(0, 0, 0, 1); // 기본 회전 없음
 }
 
-
-  /* 위에보는 코드 
-  const aspect = width / height;
-const d = 10; // zoom 정도
-this._camera = new THREE.OrthographicCamera(
-  -d * aspect,
-  d * aspect,
-  d,
-  -d,
-  0.1,
-  100
-);
-this._camera.position.set(0, 10, 20);
-this._camera.lookAt(0, 0, 0);
-
-  */
-
   _setupLight() {
     this._scene.add(new THREE.AmbientLight(0xffffff, 1.0));
 
@@ -108,7 +91,7 @@ this._camera.lookAt(0, 0, 0);
     this._dynamicBodies = [];
 
     // 유리병
-    new GlassBottle(this._scene);
+    new GlassBottle(this._scene, this._world);
 
     // 바닥
     new FloorBace(this._scene, this._world);
@@ -151,6 +134,9 @@ this._camera.lookAt(0, 0, 0);
     });
     if (this._debug) this._debug.update();
     this._orbitControls.update();
+
+    
+
   }
 
   render() {
