@@ -33,8 +33,14 @@ const ITEM_CONFIGS = {
   rice: {
     glb: "/models/rice.glb",
     scale: 0.4,
-    collider: { type: "line", radius: 0.15, halfHeight: 0.3 }, // 쌀 
-  },
+    collider: {
+    type: "capsule",
+    radius: 0.2,         // 지름 = 0.4 (width, depth)
+    halfHeight: 0.2,     // 몸통 길이 = 0.2
+    offsetY: 0.1,        // 필요 시 약간 위로
+    rotation: [0, Math.PI / 2, Math.PI / 2]
+  }
+  }
   
 };
 
@@ -87,11 +93,34 @@ export default class FruitFactory {
             config.collider.radius
           );
           break;
+         case "box":
+          colliderDesc = RAPIER.ColliderDesc.cuboid(
+            config.collider.width / 2,
+            config.collider.height / 2,
+            config.collider.depth / 2
+          );
+          break;
+          case "capsule":
+          colliderDesc = RAPIER.ColliderDesc.capsule(
+            config.collider.halfHeight,
+            config.collider.radius
+          );
+          break;
+
       }
 
       if (config.collider.offsetY) {
-  colliderDesc.setTranslation(0, config.collider.offsetY, 0); // 👈 이 줄
-}
+        colliderDesc.setTranslation(0, config.collider.offsetY, 0); // 👈 이 줄
+      }
+
+      // 쌀 콜라이더 회전
+      if (config.collider.rotation) {
+        const [rx, ry, rz] = config.collider.rotation;
+        const quat = new THREE.Quaternion().setFromEuler(new THREE.Euler(rx, ry, rz));
+        colliderDesc.setRotation({ x: quat.x, y: quat.y, z: quat.z, w: quat.w });
+      }
+
+
 
       colliderDesc
         .setMass(2)
