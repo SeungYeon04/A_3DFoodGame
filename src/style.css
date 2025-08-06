@@ -19,6 +19,7 @@ body {
     display: flex;
     justify-content: space-between;
     padding: 25% 20px;
+    pointer-events: none; 
 }
 
 #btn-left, #btn-right {
@@ -30,6 +31,7 @@ body {
   border: none;
   background-color: transparent;
   cursor: pointer;
+  pointer-events: auto;
 }
 
 #btn-left {
