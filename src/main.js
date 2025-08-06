@@ -1,3 +1,6 @@
+// ==========================
+// 📦 의조성 및 모듈 보기
+// ==========================
 import "./style.css";
 import * as THREE from "three";
 import { OrbitControls } from "three/addons/controls/OrbitControls.js";
@@ -6,8 +9,8 @@ import RAPIER from "@dimforge/rapier3d-compat";
 import GlassBottle from "./glassBottle.js";
 import FloorBace from "./floorBace.js";
 import FruitFactory from "./fruitFactory.js";
+import CameraCt from "./camera.js";
 
-// 디버그 렌더러 클래스
 class RapierDebugRenderer {
   constructor(scene, world) {
     this._world = world;
@@ -31,12 +34,16 @@ export default class App {
   constructor() {
     RAPIER.init().then(() => {
       this._world = new RAPIER.World(new RAPIER.Vector3(0, -9.81, 0));
-
       this._setupThreeJs();
+      this._scene.add(this._worldGroup);
+
       this._setupCamera();
       this._setupLight();
       this._setupControls();
       this._setupModel();
+
+      this._cameraController = new CameraCt(this._worldGroup, this._bottleBody);
+
       this._setupEvents();
 
       this._debug = new RapierDebugRenderer(this._scene, this._world);
@@ -45,32 +52,28 @@ export default class App {
 
   _setupThreeJs() {
     this._divContainer = document.querySelector("#app");
+
     const renderer = new THREE.WebGLRenderer({ antialias: true });
     renderer.setClearColor(new THREE.Color("#e0f7fa"), 1);
     renderer.setPixelRatio(window.devicePixelRatio);
     renderer.shadowMap.enabled = true;
     renderer.shadowMap.type = THREE.VSMShadowMap;
+
     this._divContainer.appendChild(renderer.domElement);
     this._renderer = renderer;
     this._scene = new THREE.Scene();
+    this._worldGroup = new THREE.Group();
   }
 
   _setupCamera() {
-  const width = this._divContainer.clientWidth;
-  const height = this._divContainer.clientHeight;
+    const width = this._divContainer.clientWidth;
+    const height = this._divContainer.clientHeight;
 
-  // 1. 카메라 생성
-  this._camera = new THREE.PerspectiveCamera(60, width / height, 0.1, 100);
-
-  // 2. 정면에서 위로 수직 이동 (회전은 X)
-  this._camera.position.set(0, 5, 20);
-
-  // 3. 회전 수동 설정 (절대 lookAt 쓰지 마라!)
-  this._camera.rotation.set(0, 0, 0); // pitch, yaw, roll 전부 0도
-
-  // 4. (선택) 쿼터니언 강제로 덮어씌우기 – 안전
-  this._camera.quaternion.set(0, 0, 0, 1); // 기본 회전 없음
-}
+    this._camera = new THREE.PerspectiveCamera(60, width / height, 0.1, 100);
+    this._camera.position.set(0, 5, 20);
+    this._camera.rotation.set(0, 0, 0);
+    this._camera.quaternion.set(0, 0, 0, 1);
+  }
 
   _setupLight() {
     this._scene.add(new THREE.AmbientLight(0xffffff, 1.0));
@@ -89,38 +92,44 @@ export default class App {
 
   _setupModel() {
     this._dynamicBodies = [];
-
-    // 유리병
-    new GlassBottle(this._scene, this._world);
-
-    // 바닥
-    new FloorBace(this._scene, this._world);
-
-    // 아이템 팩토리
-    this._fruitFactory = new FruitFactory(this._scene, this._world, this._dynamicBodies);
+    this._bottleBody = GlassBottle(this._worldGroup, this._world, RAPIER);
+    new FloorBace(this._worldGroup, this._world);
+    this._fruitFactory = new FruitFactory(this._worldGroup, this._world, this._dynamicBodies);
   }
 
   _setupControls() {
-  this._orbitControls = new OrbitControls(this._camera, this._divContainer);
-
-    // 카메라 앞쪽 방향으로 target 고정
-    const forward = new THREE.Vector3(0, 0, -1);
+    this._orbitControls = new OrbitControls(this._camera, this._divContainer);
+    const forward = new THREE.Vector3(0, 0, 0);
     const target = this._camera.position.clone().add(forward);
     this._orbitControls.target.copy(target);
     this._orbitControls.update();
   }
 
-
   _setupEvents() {
     window.onresize = this.resize.bind(this);
     this.resize();
+
     this._clock = new THREE.Clock();
     requestAnimationFrame(this.render.bind(this));
 
     this._divContainer.addEventListener("click", () => {
-      const types = ["box", "sphere", "cylinder", "torus"];
+      const types = ["rice", "rice", "rice", "rice"];
       const type = types[Math.floor(Math.random() * types.length)];
       this._fruitFactory.spawnItem(type, new THREE.Vector3(0, 10, 0));
+    });
+
+    document.querySelector("#btn-left").addEventListener("click", () => {
+      const angle = THREE.MathUtils.degToRad(90);
+      this._worldGroup.rotation.y += angle;
+      const q = new THREE.Quaternion().setFromEuler(new THREE.Euler(0, this._worldGroup.rotation.y, 0));
+      this._bottleBody.setNextKinematicRotation(q);
+    });
+
+    document.querySelector("#btn-right").addEventListener("click", () => {
+      const angle = THREE.MathUtils.degToRad(-90);
+      this._worldGroup.rotation.y += angle;
+      const q = new THREE.Quaternion().setFromEuler(new THREE.Euler(0, this._worldGroup.rotation.y, 0));
+      this._bottleBody.setNextKinematicRotation(q);
     });
   }
 
@@ -128,15 +137,14 @@ export default class App {
     const delta = this._clock.getDelta();
     this._world.timestep = Math.min(delta, 0.1);
     this._world.step();
+
     this._dynamicBodies.forEach(([mesh, body]) => {
       mesh.position.copy(body.translation());
       mesh.quaternion.copy(body.rotation());
     });
+
     if (this._debug) this._debug.update();
     this._orbitControls.update();
-
-    
-
   }
 
   render() {

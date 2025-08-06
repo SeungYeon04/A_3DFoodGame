@@ -1,7 +1,7 @@
+// glassBottle.js
 import * as THREE from "three";
-import RAPIER from "@dimforge/rapier3d-compat";
 
-export default  function GlassBottle(scene, world) {
+export default function GlassBottle(scene, world, RAPIER) {
   const glassMat = new THREE.MeshStandardMaterial({
     color: 0x88ccee,
     transparent: true,
@@ -10,6 +10,7 @@ export default  function GlassBottle(scene, world) {
   });
 
   const wallT = 0.2, w = 8, h = 10, d = 4;
+
   const wallConfigs = [
     [w, h, wallT, 0, h / 2, -d / 2], // back
     [w, h, wallT, 0, h / 2, d / 2],  // front
@@ -17,7 +18,9 @@ export default  function GlassBottle(scene, world) {
     [wallT, h, d, w / 2, h / 2, 0],  // right
   ];
 
-  const staticBody = world.createRigidBody(RAPIER.RigidBodyDesc.fixed());
+  const staticBody = world.createRigidBody(
+    RAPIER.RigidBodyDesc.kinematicPositionBased()
+  );
 
   wallConfigs.forEach(([x, y, z, px, py, pz]) => {
     const mesh = new THREE.Mesh(new THREE.BoxGeometry(x, y, z), glassMat);
@@ -27,8 +30,10 @@ export default  function GlassBottle(scene, world) {
     const collider = RAPIER.ColliderDesc.cuboid(x / 2, y / 2, z / 2)
       .setTranslation(px, py, pz)
       .setRestitution(0)
-      .setFriction(1)
+      .setFriction(1);
 
     world.createCollider(collider, staticBody);
   });
+
+  return staticBody; // ✅ RigidBody 반환
 }
