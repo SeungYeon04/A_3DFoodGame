@@ -1,4 +1,4 @@
-// 📦 수정된 전체 App 클래스 (카메라는 고정, 병은 실제로 회전 X)
+// App.js
 import "./style.css";
 import * as THREE from "three";
 import { OrbitControls } from "three/addons/controls/OrbitControls.js";
@@ -8,6 +8,7 @@ import GlassBottle from "./glassBottle.js";
 import FloorBace from "./floorBace.js";
 import FruitFactory from "./fruitFactory.js";
 import CameraCt from "./camera.js";
+import { handleCollisions } from "./collisionEvent.js";
 
 class RapierDebugRenderer {
   constructor(scene, world) {
@@ -39,23 +40,21 @@ export default class App {
       this._setupControls();
       this._setupModel();
 
-      this._cameraController = new CameraCt(this._camera); // ✅ 카메라만 전달
+      this._eventQueue = new RAPIER.EventQueue(true);
+      this._cameraController = new CameraCt(this._camera);
 
       this._setupEvents();
-
       this._debug = new RapierDebugRenderer(this._scene, this._world);
     });
   }
 
   _setupThreeJs() {
     this._divContainer = document.querySelector("#app");
-
     const renderer = new THREE.WebGLRenderer({ antialias: true });
     renderer.setClearColor(new THREE.Color("#e0f7fa"), 1);
     renderer.setPixelRatio(window.devicePixelRatio);
     renderer.shadowMap.enabled = true;
     renderer.shadowMap.type = THREE.VSMShadowMap;
-
     this._divContainer.appendChild(renderer.domElement);
     this._renderer = renderer;
     this._scene = new THREE.Scene();
@@ -64,14 +63,12 @@ export default class App {
   _setupCamera() {
     const width = this._divContainer.clientWidth;
     const height = this._divContainer.clientHeight;
-
     this._camera = new THREE.PerspectiveCamera(60, width / height, 0.1, 100);
     this._camera.position.set(0, 5, 20);
   }
 
   _setupLight() {
     this._scene.add(new THREE.AmbientLight(0xffffff, 1.0));
-
     const spotLight1 = new THREE.SpotLight(0xffffff, 1);
     spotLight1.position.set(2.5, 10, 5);
     spotLight1.angle = Math.PI / 3;
@@ -86,7 +83,8 @@ export default class App {
 
   _setupModel() {
     this._dynamicBodies = [];
-    this._bottleBody = GlassBottle(this._scene, this._world, RAPIER); // ✅ worldGroup 제거
+    this._removalQueue = [];
+    this._bottleBody = GlassBottle(this._scene, this._world, RAPIER);
     new FloorBace(this._scene, this._world);
     this._fruitFactory = new FruitFactory(this._scene, this._world, this._dynamicBodies);
   }
@@ -100,12 +98,11 @@ export default class App {
   _setupEvents() {
     window.onresize = this.resize.bind(this);
     this.resize();
-
     this._clock = new THREE.Clock();
     requestAnimationFrame(this.render.bind(this));
 
     this._divContainer.addEventListener("click", () => {
-      const types = ["rice", "chili", "garlic", "plum", "apple", "peach"];
+      const types = ["rice", "chili", "garlic", "darkgarlic", "plum", "apple", "peach"];
       const type = types[Math.floor(Math.random() * types.length)];
       this._fruitFactory.spawnItem(type, new THREE.Vector3(0, 10, 0));
     });
@@ -122,12 +119,34 @@ export default class App {
   update() {
     const delta = this._clock.getDelta();
     this._world.timestep = Math.min(delta, 0.1);
-    this._world.step();
+    this._world.step(this._eventQueue);
 
-    this._dynamicBodies.forEach(([mesh, body]) => {
+    // 병합 체크
+    handleCollisions(
+      this._world,
+      this._eventQueue,
+      this._dynamicBodies,
+      this._scene,
+      this._fruitFactory.spawnItem.bind(this._fruitFactory),
+      this._removalQueue
+    );
+
+    // 제거 큐 반영
+    if (this._removalQueue.length > 0) {
+      for (const obj of this._removalQueue) {
+        this._scene.remove(obj.mesh);
+        this._world.removeRigidBody(obj.body);
+        const i = this._dynamicBodies.indexOf(obj);
+        if (i !== -1) this._dynamicBodies.splice(i, 1);
+      }
+      this._removalQueue.length = 0;
+    }
+
+    // 위치 동기화
+    for (const { mesh, body } of this._dynamicBodies) {
       mesh.position.copy(body.translation());
       mesh.quaternion.copy(body.rotation());
-    });
+    }
 
     if (this._debug) this._debug.update();
     this._orbitControls.update();
