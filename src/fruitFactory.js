@@ -4,27 +4,40 @@ import { GLTFLoader } from "three/examples/jsm/loaders/GLTFLoader";
 
 const loader = new GLTFLoader();
 
+// ⚠️ 일부러 여러 번 덮어쓰기 하는 구조 (마지막만 사용됨)
 const ITEM_CONFIGS = {
-  rice: {
-    glb: "/models/rice.glb",
-    scale: 0.6,
-    collider: { type: "rice", radius: 0.7 },
-  },
-  rice: {
-    glb: "/models/rice.glb",
+  
+  peach: {
+    glb: "/models/peach.glb",
     scale: 0.5,
-    collider: { type: "rice", radius: 0.3, halfHeight: 0.6 },
+    collider: { type: "peach", radius: 0.3, halfHeight: 0.6 },
+  },
+  apple: {
+    glb: "/models/apple.glb",
+    scale: 0.4,    
+    collider: { type: "apple", radius: 0.15, halfHeight: 0.3 }, // 자두
+  },
+  plum: {
+    glb: "/models/plum.glb",
+    scale: 0.4,
+    collider: { type: "plum", radius: 0.15, halfHeight: 0.3 }, // 쌀 
+  },
+  garlic: {
+    glb: "/models/garlic.glb",
+    scale: 0.4,
+    collider: { type: "garlic", radius: 0.15, halfHeight: 0.3 }, // 쌀 
+  },
+  chili: {
+    glb: "/models/chili.glb",
+    scale: 0.6,
+    collider: { type: "chili", radius: 0.15, halfHeight: 0.3  },
   },
   rice: {
     glb: "/models/rice.glb",
     scale: 0.4,
-    collider: { type: "rice", halfExtents: [0.3, 0.3, 0.3] },
+    collider: { type: "rice", radius: 0.15, halfHeight: 0.3 }, // 쌀 
   },
-  rice: {
-    glb: "/models/rice.glb",
-    scale: 0.5,
-    collider: { type: "rice", radius: 0.3, halfHeight: 0.5 },
-  },
+  
 };
 
 export default class FruitFactory {
@@ -34,7 +47,7 @@ export default class FruitFactory {
     this.dynamicBodies = dynamicBodies;
   }
 
-  spawnItem(type = "watermelon", position = new THREE.Vector3(0, 5, 0)) {
+  spawnItem(type = "rice", position = new THREE.Vector3(0, 10, 0)) {
     const config = ITEM_CONFIGS[type];
     if (!config) {
       console.warn(`❌ unknown item type: ${type}`);
@@ -43,7 +56,7 @@ export default class FruitFactory {
 
     loader.load(
       config.glb,
-      gltf => {
+      (gltf) => {
         const mesh = gltf.scene;
         mesh.scale.setScalar(config.scale);
         mesh.position.copy(position);
@@ -53,46 +66,29 @@ export default class FruitFactory {
         const bodyDesc = RAPIER.RigidBodyDesc.dynamic()
           .setTranslation(position.x, position.y, position.z)
           .setCanSleep(false)
-          .setLinearDamping(1.5)
-          .setAngularDamping(2.0);
+          .setLinearDamping(2.0)   // 낙하 중 좌우 이동 최소화
+          .setAngularDamping(2.0); // 낙하 중 회전 최소화
 
         const body = this.world.createRigidBody(bodyDesc);
 
-        let colliderDesc;
-
-        //타입으로 불러옴 
-        switch (config.collider.type) {
-          case "rice":
-            colliderDesc = RAPIER.ColliderDesc.ball(config.collider.radius);
-            break;
-          case "rice":
-            colliderDesc = RAPIER.ColliderDesc.cylinder(
-              config.collider.halfHeight,
-              config.collider.radius
-            );
-            break;
-          case "rice":
-            colliderDesc = RAPIER.ColliderDesc.cuboid(
-              ...config.collider.halfExtents
-            );
-            break;
-          default:
-            console.warn("⚠️ Unknown collider type");
-            return;
-        }
-
-        colliderDesc
+        const colliderDesc = RAPIER.ColliderDesc.cylinder(
+          config.collider.halfHeight,
+          config.collider.radius
+        )
           .setMass(2)
-          .setRestitution(0)
-          .setFriction(1)
+          .setRestitution(0.1)
+          .setFriction(1.0)
           .setRestitutionCombineRule(RAPIER.CoefficientCombineRule.Min)
           .setFrictionCombineRule(RAPIER.CoefficientCombineRule.Min);
 
-        this.world.createCollider(colliderDesc, body);
         this.dynamicBodies.push([mesh, body]);
+        this.world.createCollider(colliderDesc, body);
+
+
+        // ✅ 직선 낙하 → 회전력 없음 (충돌로만 반응)
       },
       undefined,
-      err => {
+      (err) => {
         console.error("❌ 모델 로드 실패", err);
       }
     );

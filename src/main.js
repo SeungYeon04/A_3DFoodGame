@@ -113,7 +113,8 @@ export default class App {
     requestAnimationFrame(this.render.bind(this));
 
     this._divContainer.addEventListener("click", () => {
-      const types = ["rice", "rice", "rice", "rice"];
+      //쌀, 고추, 진마늘, 흑마늘, 자두, 사과, 복숭아
+      const types = ["rice", "chili", "garlic", "plum", "apple", "peach"];
       const type = types[Math.floor(Math.random() * types.length)];
       this._fruitFactory.spawnItem(type, new THREE.Vector3(0, 10, 0));
     });
