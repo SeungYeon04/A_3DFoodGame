@@ -8,6 +8,7 @@ import GlassBottle from "./glassBottle.js";
 import FloorBace from "./floorBace.js";
 import FruitFactory from "./fruitFactory.js";
 import CameraCt from "./camera.js";
+import PreviewCt from "./previewCt.js"
 import { handleCollisions } from "./collisionEvent.js";
 
 class RapierDebugRenderer {
@@ -87,12 +88,24 @@ export default class App {
     this._bottleBody = GlassBottle(this._scene, this._world, RAPIER);
     new FloorBace(this._scene, this._world);
     this._fruitFactory = new FruitFactory(this._scene, this._world, this._dynamicBodies);
+  
+    /** 프리뷰 컨트롤러 */
+    this._previewController = new PreviewCt(
+    this._scene,
+    this._camera,
+    this._fruitFactory.spawnItem.bind(this._fruitFactory),
+    );
   }
 
   _setupControls() {
     this._orbitControls = new OrbitControls(this._camera, this._divContainer);
     this._orbitControls.target.set(0, 5, 0);
     this._orbitControls.update();
+
+    // ✅ 마우스/터치로 화면 회전 완전 비활성화
+    this._orbitControls.enableRotate = false;
+    this._orbitControls.enableZoom = false;
+    this._orbitControls.enablePan = false;
   }
 
   _setupEvents() {
@@ -101,11 +114,15 @@ export default class App {
     this._clock = new THREE.Clock();
     requestAnimationFrame(this.render.bind(this));
 
+    /*
+    //클릭이벤트 
     this._divContainer.addEventListener("click", () => {
       const types = ["rice", "chili", "garlic", "darkgarlic", "plum", "apple", "peach"];
       const type = types[Math.floor(Math.random() * types.length)];
       this._fruitFactory.spawnItem(type, new THREE.Vector3(0, 10, 0));
-    });
+    });*/
+
+
 
     document.querySelector("#btn-left").addEventListener("click", () => {
       this._cameraController.rotateLeft();
@@ -147,6 +164,9 @@ export default class App {
       mesh.position.copy(body.translation());
       mesh.quaternion.copy(body.rotation());
     }
+
+    //프리뷰컨트롤러 
+    this._previewController.update();
 
     if (this._debug) this._debug.update();
     this._orbitControls.update();

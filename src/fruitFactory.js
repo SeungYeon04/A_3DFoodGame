@@ -4,7 +4,7 @@ import { GLTFLoader } from "three/examples/jsm/loaders/GLTFLoader";
 
 const loader = new GLTFLoader();
 
-const ITEM_CONFIGS = {
+export const ITEM_CONFIGS = {
   peach: {
     glb: "/models/peach.glb",
     scale: 1.8,
@@ -72,99 +72,100 @@ export default class FruitFactory {
   constructor(scene, world, dynamicBodies) {
     this.scene = scene;
     this.world = world;
+    
     this.dynamicBodies = dynamicBodies;
   }
 
- spawnItem(type = "rice", position = new THREE.Vector3(0, 10, 0)) {
+spawnItem(type = "rice", position = new THREE.Vector3(0, 10, 0), isPreview = false) {
   const config = ITEM_CONFIGS[type];
   if (!config) {
     console.warn(`❌ unknown item type: ${type}`);
     return;
   }
 
-  loader.load(
-    config.glb,
-    (gltf) => {
-      const mesh = gltf.scene;
-      mesh.scale.setScalar(config.scale);
-      mesh.position.copy(position);
-      mesh.castShadow = true;
-      this.scene.add(mesh);
+  return new Promise((resolve, reject) => {
+    loader.load(
+      config.glb,
+      (gltf) => {
+        const mesh = gltf.scene;
+        mesh.scale.setScalar(config.scale);
+        mesh.position.copy(position);
+        mesh.castShadow = true;
 
-      //다크마늘을 위한 컬러설정
-       if (config.color) {
-      mesh.traverse((child) => {
-        if (child.isMesh) {
-          child.material = new THREE.MeshStandardMaterial({ color: config.color });
+        if (config.color) {
+          mesh.traverse((child) => {
+            if (child.isMesh) {
+              child.material = new THREE.MeshStandardMaterial({ color: config.color });
+            }
+          });
         }
-      });
-    }
-      
-      const bodyDesc = RAPIER.RigidBodyDesc.dynamic()
-        .setTranslation(
-          position.x,
-          position.y, 
-          position.z
-        )
-        .setCanSleep(false)
-        .setLinearDamping(0.5)
-        .setAngularDamping(0.2);
 
-      const body = this.world.createRigidBody(bodyDesc);
-      body.userData = { type }
+        this.scene.add(mesh);
 
-      let colliderDesc;
+        const bodyDesc = RAPIER.RigidBodyDesc.dynamic()
+          .setTranslation(position.x, position.y, position.z)
+          .setCanSleep(false)
+          .setLinearDamping(0.5)
+          .setAngularDamping(0.2);
 
-      switch (config.collider.type) {
-        case "circle":
-          colliderDesc = RAPIER.ColliderDesc.ball(config.collider.radius);
-          break;
-         case "box":
-          colliderDesc = RAPIER.ColliderDesc.cuboid(
-            config.collider.width / 2,
-            config.collider.height / 2,
-            config.collider.depth / 2
-          );
-          break;
+        const body = this.world.createRigidBody(bodyDesc);
+        body.userData = { type };
+
+        if (isPreview) body.setEnabled(false); // ✅ 프리뷰면 물리 꺼두기
+
+        let colliderDesc;
+        switch (config.collider.type) {
+          case "circle":
+            colliderDesc = RAPIER.ColliderDesc.ball(config.collider.radius);
+            break;
+          case "box":
+            colliderDesc = RAPIER.ColliderDesc.cuboid(
+              config.collider.width / 2,
+              config.collider.height / 2,
+              config.collider.depth / 2
+            );
+            break;
           case "capsule":
-          colliderDesc = RAPIER.ColliderDesc.capsule(
-            config.collider.halfHeight,
-            config.collider.radius
-          );
-          break;
-      }
+            colliderDesc = RAPIER.ColliderDesc.capsule(
+              config.collider.halfHeight,
+              config.collider.radius
+            );
+            break;
+        }
 
-      if (config.collider.offsetY) {
-        colliderDesc.setTranslation(0, config.collider.offsetY, 0); // 👈 이 줄
-      }
+        if (config.collider.offsetY) {
+          colliderDesc.setTranslation(0, config.collider.offsetY, 0);
+        }
 
-      // 쌀 콜라이더 회전
-      if (config.collider.rotation) {
-        const [rx, ry, rz] = config.collider.rotation;
-        const quat = new THREE.Quaternion().setFromEuler(new THREE.Euler(rx, ry, rz));
-        colliderDesc.setRotation({ x: quat.x, y: quat.y, z: quat.z, w: quat.w });
-      }
+        if (config.collider.rotation) {
+          const [rx, ry, rz] = config.collider.rotation;
+          const quat = new THREE.Quaternion().setFromEuler(new THREE.Euler(rx, ry, rz));
+          colliderDesc.setRotation({ x: quat.x, y: quat.y, z: quat.z, w: quat.w });
+        }
 
-      
+        colliderDesc
+          .setMass(2)
+          .setRestitution(0.1)
+          .setFriction(0.1)
+          .setRestitutionCombineRule(RAPIER.CoefficientCombineRule.Min)
+          .setFrictionCombineRule(RAPIER.CoefficientCombineRule.Min)
+          .setActiveEvents(RAPIER.ActiveEvents.COLLISION_EVENTS);
 
-      colliderDesc
-        .setMass(2)
-        .setRestitution(0.1)
-        .setFriction(0.1)
-        .setRestitutionCombineRule(RAPIER.CoefficientCombineRule.Min)
-        .setFrictionCombineRule(RAPIER.CoefficientCombineRule.Min)
-        .setActiveEvents(RAPIER.ActiveEvents.COLLISION_EVENTS); // ✅ 이거 필수!
+        this.world.createCollider(colliderDesc, body);
+
+        this.dynamicBodies.push({ mesh, body, type });
 
         
-      this.world.createCollider(colliderDesc, body);
-      this.dynamicBodies.push({ mesh, body, type });
 
-    },
-    undefined,
-    (err) => {
-      console.error("❌ 모델 로드 실패", err);
-    }
-  );
+        resolve({ mesh, body }); // ✅ 반환
+      },
+      undefined,
+      (err) => {
+        console.error("❌ 모델 로드 실패", err);
+        reject(err);
+      }
+    );
+  });
 }
 
 }
