@@ -9,8 +9,8 @@
   
 ## 🔗 프로젝트 링크
 
-- GitHub: **(추후 추가 예정)**
-- VerCel: **(추후 추가 예정)**
+- GitHub: **(추후 추가 예정)**  
+- Netlify: **https://uscode3dfood.netlify.app/**  
   
 ## 🖥️ 프로젝트 소개
 
