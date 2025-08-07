@@ -84,7 +84,7 @@ export default class PreviewCt {
       const types = ["rice", "chili", "garlic"];
       this.nextType = types[Math.floor(Math.random() * types.length)];
 
-      setTimeout(() => this._preparePreview(), 50); // 약간의 지연 후 다음 프리뷰 준비
+      setTimeout(() => this._preparePreview(), 10); // 약간의 지연 후 다음 프리뷰 준비
     };
 
     // 마우스/터치 이벤트 리스너 등록
