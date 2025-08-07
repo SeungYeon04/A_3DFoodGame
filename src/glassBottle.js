@@ -20,6 +20,7 @@ export default function GlassBottle(scene, world, RAPIER) {
     [w, h, wallT, 0, h / 2, d / 2],  // 앞쪽 벽
     [wallT, h, d, -w / 2, h / 2, 0], // 왼쪽 벽
     [wallT, h, d, w / 2, h / 2, 0],  // 오른쪽 벽
+    [w, wallT, d, 0, wallT / 2, 0]
   ];
 
   // 물리 시뮬레이션에서 움직이지 않는 키네마틱(kinematic) 리지드바디를 생성
