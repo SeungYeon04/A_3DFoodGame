@@ -25,15 +25,13 @@ export default class PreviewCt {
     let isDragging = false;
 let prevClientX = 0;
 
-const startDrag = (clientX) => {
-  console.log("🎯 startDrag:", clientX);
+  const startDrag = (clientX) => {
+    if (!this.currentItem) return;
 
-  if (!this.currentItem) return;
-
-  prevClientX = clientX;
-  isDragging = true;
-  this.isHolding = true;
-};
+    prevClientX = clientX;
+    isDragging = true;
+    this.isHolding = true;
+  };
 
 const moveDrag = (clientX) => {
   if (!this.currentItem || !isDragging) return;

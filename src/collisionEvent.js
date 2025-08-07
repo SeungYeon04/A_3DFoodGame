@@ -12,8 +12,6 @@ export const MERGE_MAP = {
 
 export function handleCollisions(world, eventQueue, dynamicBodies, scene, spawnItem, removalQueue) {
   eventQueue.drainCollisionEvents((handle1, handle2) => {
-    console.log("🧩 충돌 이벤트 발생", handle1, handle2);
-
     const colliderA = world.getCollider(handle1);
     const colliderB = world.getCollider(handle2);
     if (!colliderA || !colliderB) return;
@@ -25,12 +23,13 @@ export function handleCollisions(world, eventQueue, dynamicBodies, scene, spawnI
     const objA = dynamicBodies.find(o => o.body.handle === rigidBodyA.handle);
     const objB = dynamicBodies.find(o => o.body.handle === rigidBodyB.handle);
 
+    /*
     if (!objA || !objB) {
       console.warn("❌ dynamicBodies에서 못 찾음");
       return;
-    }
+    }*/
 
-    console.log("🔍 타입 비교:", objA.type, objB.type);
+    //console.log("🔍 타입 비교:", objA.type, objB.type);
 
     if (removalQueue.includes(objA) || removalQueue.includes(objB)) {
       console.log("🚫 제거 대기 중이라 스킵됨");
