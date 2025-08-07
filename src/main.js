@@ -94,6 +94,7 @@ export default class App {
     this._scene,
     this._camera,
     this._fruitFactory.spawnItem.bind(this._fruitFactory),
+    this._dynamicBodies 
     );
   }
 

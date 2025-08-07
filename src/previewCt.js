@@ -1,10 +1,11 @@
 import * as THREE from "three";
 
 export default class PreviewCt {
-  constructor(scene, camera, spawnItemCallback) {
+  constructor(scene, camera, spawnItemCallback, dynamicBodies) {
     this.scene = scene;
     this.camera = camera;
     this.spawnItem = spawnItemCallback;
+    this.dynamicBodies = dynamicBodies;
 
     this.currentItem = null;
     this.nextType = "rice";
@@ -22,33 +23,30 @@ export default class PreviewCt {
   _setupEvents() {
     const canvas = document.querySelector("canvas");
     let isDragging = false;
-    let dragOffsetX = 0;
+let prevClientX = 0;
 
-    const getWorldX = (clientX) => {
-      const mouse = new THREE.Vector2((clientX / window.innerWidth) * 2 - 1, 0);
-      const raycaster = new THREE.Raycaster();
-      raycaster.setFromCamera(mouse, this.camera);
+const startDrag = (clientX) => {
+  console.log("🎯 startDrag:", clientX); 
+  if (!this.currentItem) return;
+  prevClientX = clientX;
+  isDragging = true;
+  this.isHolding = true;
+};
 
-      const plane = new THREE.Plane(new THREE.Vector3(0, 0, 1), 0);
-      const hit = new THREE.Vector3();
-      raycaster.ray.intersectPlane(plane, hit);
-      return hit.x;
-    };
+const moveDrag = (clientX) => {
+  console.log("➡️ moveDrag:", clientX);
+  if (!this.currentItem || !isDragging) return;
 
-    const startDrag = (clientX) => {
-      if (!this.currentItem) return;
-      const worldX = getWorldX(clientX);
-      dragOffsetX = this.currentItem.mesh.position.x - worldX;
-      isDragging = true;
-      this.isHolding = true;
-    };
+  const deltaX = clientX - prevClientX;
+  prevClientX = clientX;
 
-    const moveDrag = (clientX) => {
-      if (!this.currentItem || !isDragging) return;
-      const worldX = getWorldX(clientX);
-      this.currentItem.mesh.position.x = worldX + dragOffsetX;
-      this.currentItem.body.setTranslation(this.currentItem.mesh.position, true); // 이동 반영
-    };
+  // 화면 기준 → 월드 좌표 환산해서 x축 이동
+  const moveAmount = deltaX * 0.02; // 감도 조절 가능
+
+  this.currentItem.mesh.position.x += moveAmount;
+  this.currentItem.body.setTranslation(this.currentItem.mesh.position, true);
+};
+
 
     const endDrag = () => {
       if (!this.currentItem || !this.isHolding) return;
@@ -56,6 +54,12 @@ export default class PreviewCt {
       const { mesh, body } = this.currentItem;
       body.setTranslation(mesh.position, true); // 위치 반영
       body.setEnabled(true); // 물리 ON
+
+
+      // ✅ 물리 활성화된 currentItem을 dynamicBodies에 넣기
+      if (!this.dynamicBodies.includes(this.currentItem)) {
+        this.dynamicBodies.push(this.currentItem);
+      }
 
       this.currentItem = null;
       this.isHolding = false;
@@ -67,19 +71,22 @@ export default class PreviewCt {
       setTimeout(() => this._preparePreview(), 50);
     };
 
-    // PC
-    canvas.addEventListener("pointerdown", (e) => startDrag(e.clientX));
-    canvas.addEventListener("pointermove", (e) => moveDrag(e.clientX));
-    window.addEventListener("pointerup", endDrag);
-
-    // 모바일
+    canvas.addEventListener("mousedown", (e) => startDrag(e.clientX));
     canvas.addEventListener("touchstart", (e) => {
       if (e.touches.length > 0) startDrag(e.touches[0].clientX);
-    });
-    canvas.addEventListener("touchmove", (e) => {
+    }, { passive: false });
+
+    window.addEventListener("mousemove", (e) => moveDrag(e.clientX), { passive: false });
+    window.addEventListener("touchmove", (e) => {
       if (e.touches.length > 0) moveDrag(e.touches[0].clientX);
-    });
-    canvas.addEventListener("touchend", endDrag);
+    }, { passive: false });
+
+    window.addEventListener("mouseup", endDrag);
+    window.addEventListener("touchend", endDrag);
+
+    // ✅ 이거도 꼭
+    canvas.addEventListener("contextmenu", (e) => e.preventDefault());
+
   }
 
   update() {
