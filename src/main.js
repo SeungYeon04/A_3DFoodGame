@@ -137,7 +137,6 @@ export default class App {
   update() {
     const delta = this._clock.getDelta();
     this._world.timestep = Math.min(delta, 0.1);
-    this._world.step(this._eventQueue);
 
     // 병합 체크
     handleCollisions(
@@ -148,6 +147,7 @@ export default class App {
       this._fruitFactory.spawnItem.bind(this._fruitFactory),
       this._removalQueue
     );
+    //this._world.step(this._eventQueue);
 
     // 제거 큐 반영
     if (this._removalQueue.length > 0) {
@@ -168,6 +168,9 @@ export default class App {
 
     //프리뷰컨트롤러 
     this._previewController.update();
+
+    this._world.step(this._eventQueue);
+
 
     if (this._debug) this._debug.update();
     this._orbitControls.update();

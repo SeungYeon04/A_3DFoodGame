@@ -26,15 +26,16 @@ export default class PreviewCt {
 let prevClientX = 0;
 
 const startDrag = (clientX) => {
-  console.log("🎯 startDrag:", clientX); 
+  console.log("🎯 startDrag:", clientX);
+
   if (!this.currentItem) return;
+
   prevClientX = clientX;
   isDragging = true;
   this.isHolding = true;
 };
 
 const moveDrag = (clientX) => {
-  console.log("➡️ moveDrag:", clientX);
   if (!this.currentItem || !isDragging) return;
 
   const deltaX = clientX - prevClientX;
@@ -43,8 +44,12 @@ const moveDrag = (clientX) => {
   // 화면 기준 → 월드 좌표 환산해서 x축 이동
   const moveAmount = deltaX * 0.02; // 감도 조절 가능
 
-  this.currentItem.mesh.position.x += moveAmount;
-  this.currentItem.body.setTranslation(this.currentItem.mesh.position, true);
+  try {
+    this.currentItem.mesh.position.x += moveAmount;
+    this.currentItem.body.setTranslation(this.currentItem.mesh.position, true);
+  } catch (e) {
+    console.warn("⚠️ moveDrag setTranslation 에러 무시됨:", e);
+  }
 };
 
 
@@ -52,7 +57,6 @@ const moveDrag = (clientX) => {
       if (!this.currentItem || !this.isHolding) return;
 
       const { mesh, body } = this.currentItem;
-      body.setTranslation(mesh.position, true); // 위치 반영
       body.setEnabled(true); // 물리 ON
 
 

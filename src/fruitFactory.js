@@ -72,100 +72,118 @@ export default class FruitFactory {
   constructor(scene, world, dynamicBodies) {
     this.scene = scene;
     this.world = world;
-    
     this.dynamicBodies = dynamicBodies;
+    this.isSpawning = false; // 🔒 중복 방지용
+    this.spawnLock = false; 
   }
 
-spawnItem(type = "rice", position = new THREE.Vector3(0, 10, 0), isPreview = false) {
-  const config = ITEM_CONFIGS[type];
-  if (!config) {
-    console.warn(`❌ unknown item type: ${type}`);
-    return;
-  }
+  async spawnItem(type = "rice", position = new THREE.Vector3(0, 10, 0), isPreview = false) {
+    const config = ITEM_CONFIGS[type];
+    if (!config) {
+      console.warn(`❌ unknown item type: ${type}`);
+      return;
+    }
 
-  return new Promise((resolve, reject) => {
-    loader.load(
-      config.glb,
-      (gltf) => {
-        const mesh = gltf.scene;
-        mesh.scale.setScalar(config.scale);
-        mesh.position.copy(position);
-        mesh.castShadow = true;
-
-        if (config.color) {
-          mesh.traverse((child) => {
-            if (child.isMesh) {
-              child.material = new THREE.MeshStandardMaterial({ color: config.color });
-            }
-          });
+   if (this.isSpawning) {
+      if (isPreview) {
+        // 🔁 프리뷰는 기다려서 다시 시도
+        while (this.isSpawning) {
+          await new Promise((r) => setTimeout(r, 10));
         }
-
-        this.scene.add(mesh);
-
-        const bodyDesc = RAPIER.RigidBodyDesc.dynamic()
-          .setTranslation(position.x, position.y, position.z)
-          .setCanSleep(false)
-          .setLinearDamping(0.5)
-          .setAngularDamping(0.2);
-
-        const body = this.world.createRigidBody(bodyDesc);
-        body.userData = { type };
-
-        if (isPreview) body.setEnabled(false); // ✅ 프리뷰면 물리 꺼두기
-
-        let colliderDesc;
-        switch (config.collider.type) {
-          case "circle":
-            colliderDesc = RAPIER.ColliderDesc.ball(config.collider.radius);
-            break;
-          case "box":
-            colliderDesc = RAPIER.ColliderDesc.cuboid(
-              config.collider.width / 2,
-              config.collider.height / 2,
-              config.collider.depth / 2
-            );
-            break;
-          case "capsule":
-            colliderDesc = RAPIER.ColliderDesc.capsule(
-              config.collider.halfHeight,
-              config.collider.radius
-            );
-            break;
-        }
-
-        if (config.collider.offsetY) {
-          colliderDesc.setTranslation(0, config.collider.offsetY, 0);
-        }
-
-        if (config.collider.rotation) {
-          const [rx, ry, rz] = config.collider.rotation;
-          const quat = new THREE.Quaternion().setFromEuler(new THREE.Euler(rx, ry, rz));
-          colliderDesc.setRotation({ x: quat.x, y: quat.y, z: quat.z, w: quat.w });
-        }
-
-        colliderDesc
-          .setMass(2)
-          .setRestitution(0.1)
-          .setFriction(0.1)
-          .setRestitutionCombineRule(RAPIER.CoefficientCombineRule.Min)
-          .setFrictionCombineRule(RAPIER.CoefficientCombineRule.Min)
-          .setActiveEvents(RAPIER.ActiveEvents.COLLISION_EVENTS);
-
-        this.world.createCollider(colliderDesc, body);
-
-        this.dynamicBodies.push({ mesh, body, type });
-
-        
-
-        resolve({ mesh, body }); // ✅ 반환
-      },
-      undefined,
-      (err) => {
-        console.error("❌ 모델 로드 실패", err);
-        reject(err);
+        return this.spawnItem(type, position, isPreview); // 재귀 시도
+      } else {
+        console.warn("⏳ spawnItem 중복 방지됨");
+        return;
       }
-    );
-  });
-}
+    }
 
+    this.isSpawning = true; // ✅ 락 걸기
+
+    try {
+      return await new Promise((resolve, reject) => {
+        loader.load(
+          config.glb,
+          (gltf) => {
+            const mesh = gltf.scene;
+            mesh.scale.setScalar(config.scale);
+            mesh.position.copy(position);
+            mesh.castShadow = true;
+
+            if (config.color) {
+              mesh.traverse((child) => {
+                if (child.isMesh) {
+                  child.material = new THREE.MeshStandardMaterial({ color: config.color });
+                }
+              });
+            }
+
+            this.scene.add(mesh);
+
+            const bodyDesc = RAPIER.RigidBodyDesc.dynamic()
+              .setTranslation(position.x, position.y, position.z)
+              .setCanSleep(false)
+              .setLinearDamping(0.5)
+              .setAngularDamping(0.2);
+
+            const body = this.world.createRigidBody(bodyDesc);
+            body.userData = { type };
+
+            if (isPreview) body.setEnabled(false); // 미리보기는 물리 꺼두기
+
+            let colliderDesc;
+            switch (config.collider.type) {
+              case "circle":
+                colliderDesc = RAPIER.ColliderDesc.ball(config.collider.radius);
+                break;
+              case "box":
+                colliderDesc = RAPIER.ColliderDesc.cuboid(
+                  config.collider.width / 2,
+                  config.collider.height / 2,
+                  config.collider.depth / 2
+                );
+                break;
+              case "capsule":
+                colliderDesc = RAPIER.ColliderDesc.capsule(
+                  config.collider.halfHeight,
+                  config.collider.radius
+                );
+                break;
+            }
+
+            if (config.collider.offsetY) {
+              colliderDesc.setTranslation(0, config.collider.offsetY, 0);
+            }
+
+            if (config.collider.rotation) {
+              const [rx, ry, rz] = config.collider.rotation;
+              const quat = new THREE.Quaternion().setFromEuler(new THREE.Euler(rx, ry, rz));
+              colliderDesc.setRotation({ x: quat.x, y: quat.y, z: quat.z, w: quat.w });
+            }
+
+            colliderDesc
+              .setMass(2)
+              .setRestitution(0.1)
+              .setFriction(0.1)
+              .setRestitutionCombineRule(RAPIER.CoefficientCombineRule.Min)
+              .setFrictionCombineRule(RAPIER.CoefficientCombineRule.Min)
+              .setActiveEvents(RAPIER.ActiveEvents.COLLISION_EVENTS);
+
+            this.world.createCollider(colliderDesc, body);
+
+            const finalObj = { mesh, body, type };
+            if (!isPreview) this.dynamicBodies.push(finalObj);
+
+            resolve(finalObj);
+          },
+          undefined,
+          (err) => {
+            console.error("❌ 모델 로드 실패", err);
+            reject(err);
+          }
+        );
+      });
+    } finally {
+      this.isSpawning = false; // ✅ 락 해제
+    }
+  }
 }
