@@ -1,8 +1,8 @@
 # 🪴 3D 의성 특산물 머지게임
 
 **Us:Code 의성 청년 아카데미 서브 프로젝트**  
-> ⚔️ 메인 프로젝트 URL: **https://github.com/SeungYeon04/A_3DFoodGame**
-> 🪴 3D 의성 특산물 머지게임 URL:: **https://uscode3dfood.netlify.app/**  
+> ⚔️ 메인 프로젝트 URL: **https://github.com/SeungYeon04/A_3DFoodGame**  
+> 🪴 3D 의성 특산물 머지게임 URL: **https://uscode3dfood.netlify.app/**  
   
 의성 Us:Code 청년 개발 아카데미 
 **의성 2077**팀으로 의성의 특산물을 활용해 만든  
